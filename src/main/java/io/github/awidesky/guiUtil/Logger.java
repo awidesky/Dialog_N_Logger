@@ -12,10 +12,11 @@ package io.github.awidesky.guiUtil;
 import java.io.Closeable;
 import java.io.PrintStream;
 import java.nio.charset.Charset;
-import java.text.DateFormat;
 
 import io.github.awidesky.guiUtil.level.Level;
 import io.github.awidesky.guiUtil.level.Leveled;
+import io.github.awidesky.guiUtil.prefix.PrefixFormatter;
+import io.github.awidesky.guiUtil.prefix.SimplePrefixFormatter;
 
 
 
@@ -36,40 +37,37 @@ public interface Logger extends Leveled, Closeable {
 		@Override public void writeString(Level level, CharSequence str) {}
 	}; 
 
-	
-	/**
-	 * Set date information prefix for this {@code Logger} instance.
-	 * if argument is {@code null}, no date information prefix is appended.
-	 * Date prefix is always appended very first of the line.
-	 * 
-	 * @return this logger
-	 * */
-	public Logger setDatePrefix(DateFormat datePrefix);
 
-	/**
-	 * Set additional prefix for this {@code Logger} instance.
-	 * if argument is {@code null}, no additional prefix is appended.
-	 * The additional prefix is always appended after date prefix(if exists).
-	 * 
-	 * @return this logger
-	 * 
-	 * @see Logger#setDatePrefix(DateFormat)
-	 * */
-	public Logger setPrefix(String prefix);
 	
 	/**
-	 * If parameter is true, level of each log will be printed as prefix.
+	 * Set format of the prefix for this {@code Logger} instance.
 	 * 
-	 * @param flag
-	 */
-	public void setPrintLogLevel(boolean flag);
+	 * @return this logger
+	 * @see SimplePrefixFormatter
+	 * */
+	public Logger setPrefixFormatter(PrefixFormatter prefix);
+	
 	/**
-	 * If parameter is true, the name of the Thread will be printed as prefix.
+	 * Get format of the prefix for this {@code Logger} instance.
 	 * 
-	 * @param flag
-	 * @see Thread#getName()
+	 * @return the {@code PrefixFormatter} instance of this logger
+	 * */
+	public PrefixFormatter getPrefixFormatter();
+	
+	/**
+	 * Return the additional prefix string.
+	 * @return the additional prefix string. May be {@code null}
 	 */
-	public void setPrintThreadName(boolean flag);
+	public String getPrefixString();
+	
+	/**
+	 * Set additional prefix for this logger instance
+	 * that can be printed via {@code PrefixFormatter}.
+	 * 
+	 * @see PrefixFormatter
+	 * @param prefixString {@code null} is permitted.
+	 */
+	public void setPrefixString(String prefixString);
 	
 	/**
 	 * Print a new line without printing any prefixes, regardless of level.
@@ -255,4 +253,5 @@ public interface Logger extends Leveled, Closeable {
 	 * @return new child logger with additional prefix
 	 */
 	public Logger withMorePrefix(String morePrefix, boolean closeParentIfChildClosed);
+
 }

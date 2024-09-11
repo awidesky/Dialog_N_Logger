@@ -9,10 +9,14 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import io.github.awidesky.guiUtil.prefix.SimplePrefixFormatter;
+import io.github.awidesky.guiUtil.thread.LoggerThread;
+import io.github.awidesky.guiUtil.thread.TaskBufferedLogger;
+import io.github.awidesky.guiUtil.thread.TaskLogger;
 
 class TaskLoggerTest {
 
@@ -28,6 +32,7 @@ class TaskLoggerTest {
 	@BeforeEach
 	void setUpBeforeTest() {
 		lt = new LoggerThread();
+		lt.setPrefixFormatter(new SimplePrefixFormatter("[Thread %p] "));
 		sw = new StringWriter();
 		lt.setLogDestination(sw, true);
 		lt.start();
@@ -36,11 +41,10 @@ class TaskLoggerTest {
 	@Test
 	void TaskLoggertest() {
 		System.out.println("\n==========================TaskLoggerTest==========================");
-		List<TaskLogger> loggers = Stream.generate(lt::getLogger).limit(LOGGER_NUM).map(l -> {
-			l.setPrintLogLevel(false);
-			return l;
-		}).toList();
-		for(int i = 0; i < LOGGER_NUM; i++) loggers.get(i).setPrefix("[Thread " + i + "] ");
+		List<TaskLogger> loggers = new LinkedList<TaskLogger>();
+		for(int i = 0; i < LOGGER_NUM; i++) {
+			loggers.add(lt.getLoggerBuilder().setPrefixString(String.valueOf(i)).getLogger());
+		}
 		
 		loggers.stream().parallel().forEach(t -> strList.forEach(t::info));
 		lt.shutdown(1000);
@@ -61,12 +65,11 @@ class TaskLoggerTest {
 	@Test
 	void BufferedTaskLoggertest() {
 		System.out.println("\n==========================BufferedTaskLoggertest==========================");
-		List<TaskBufferedLogger> loggers = Stream.generate(lt::getBufferedLogger).limit(LOGGER_NUM).map(l -> {
-			l.setPrintLogLevel(false);
-			return l;
-		}).toList();
-		for(int i = 0; i < LOGGER_NUM; i++) loggers.get(i).setPrefix("[Thread " + i + "] ");
-		
+		List<TaskBufferedLogger> loggers = new LinkedList<TaskBufferedLogger>();
+		for(int i = 0; i < LOGGER_NUM; i++) {
+			loggers.add(lt.getLoggerBuilder().setPrefixString(String.valueOf(i)).getBufferedLogger());
+		}
+			
 		loggers.stream().parallel().forEach(t -> strList.forEach(t::info));
 		loggers.forEach(TaskBufferedLogger::flush);
 		lt.shutdown(1000);

@@ -14,12 +14,12 @@ import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.charset.Charset;
-import java.text.DateFormat;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.stream.Collectors;
 
 import io.github.awidesky.guiUtil.level.Level;
+import io.github.awidesky.guiUtil.prefix.PrefixFormatter;
+import io.github.awidesky.guiUtil.prefix.SimplePrefixFormatter;
 
 
 /**
@@ -29,45 +29,28 @@ import io.github.awidesky.guiUtil.level.Level;
  * */
 public abstract class AbstractLogger implements Logger {
 
-	protected DateFormat datePrefix = null;
-	protected boolean printThreadPrefix = false;
-	protected String prefix = null;
-	protected boolean printLogLevel = true;
+	protected String prefixStr = null;
+	protected PrefixFormatter prefix = new SimplePrefixFormatter();
 	protected Level level = Level.getRootLogLevel();
 	
 	@Override
-	public Logger setDatePrefix(DateFormat datePrefix) {
-		this.datePrefix = datePrefix;
-		return this;
-	}
-
-	@Override
-	public Logger setPrefix(String prefix) {
+	public Logger setPrefixFormatter(PrefixFormatter prefix) {
 		this.prefix = prefix;
 		return this;
 	}
 	
 	@Override
-	public void setPrintLogLevel(boolean flag) {
-		this.printLogLevel = flag;
+	public PrefixFormatter getPrefixFormatter() {
+		return prefix;
 	}
-	
+
 	@Override
-	public void setPrintThreadName(boolean flag) {
-		this.printThreadPrefix = flag;
+	public String getPrefixString() {
+		return prefixStr;
 	}
-	
-	/**
-	 * Generates prefix String(date prefix + additional prefix)
-	 * @param level
-	 * */
-	protected String getPrefix(Level level) {
-		StringBuilder sb = new StringBuilder("");
-		if(printLogLevel) sb.append(level.getPrefixText());
-		if(datePrefix != null) sb.append(datePrefix.format(new Date()));
-		if(printThreadPrefix) sb.append("[").append(Thread.currentThread().getName()).append("]");
-		if(prefix != null) sb.append(prefix);
-		return sb.toString();
+	@Override
+	public void setPrefixString(String prefixString) {
+		this.prefixStr = prefixString;
 	}
 	
 	/**
@@ -337,6 +320,15 @@ public abstract class AbstractLogger implements Logger {
 		return level;
 	}
 	
+	/**
+	 * Actually write the log with given level and string data.
+	 * Implementations typically evaluate final string by<br>
+	 * {@code prefix.format(level, prefixStr) + str}<br>
+	 * and write to external logging destination.
+	 * 
+	 * @param level the log level
+	 * @param str the string data to log
+	 */
 	protected abstract void writeString(Level level, CharSequence str);
 	
 	
@@ -374,7 +366,7 @@ public abstract class AbstractLogger implements Logger {
 	
 	@Override
 	public String toString() {
-		return getClass().getSimpleName() + " [" + "level=" + level + ", datePrefix=" + datePrefix + ", prefix=" + prefix + "]";
+		return getClass().getSimpleName() + " [" + "level=" + level + ", prefixPattern=" + prefix + "]";
 	}
 	
 }

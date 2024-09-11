@@ -18,9 +18,9 @@ public class SystemLogger extends ConsoleLogger {
 	@Override
 	protected void writeString(Level level, CharSequence str) {
 		if(Level.WARNING.includes(level))
-			System.err.println(getPrefix(level) + str);
+			System.err.println(prefix.format(level, prefixStr) + str);
 		else 
-			System.out.println(getPrefix(level) + str);
+			System.out.println(prefix.format(level, prefixStr) + str);
 	}
 
 	@Override

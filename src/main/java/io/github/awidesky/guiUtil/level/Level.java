@@ -40,11 +40,4 @@ public enum Level {
 	public boolean includes(Level other) {
 		return other.ordinal() <= ordinal(); 
 	}
-
-	/***
-	 * Returns prefix text that used in logging.  
-	 */
-	public String getPrefixText() {
-		return "[" + name() + "] ";
-	}
 }

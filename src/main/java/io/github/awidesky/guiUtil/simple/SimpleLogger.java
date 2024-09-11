@@ -90,7 +90,7 @@ public class SimpleLogger extends AbstractLogger {
 
 	@Override
 	public void writeString(Level level, CharSequence str) {
-		logTo.println(getPrefix(level) + str);
+		logTo.println(prefix.format(level, prefixStr) + str);
 	}
 
 }

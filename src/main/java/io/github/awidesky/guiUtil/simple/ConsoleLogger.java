@@ -33,7 +33,7 @@ public class ConsoleLogger extends AbstractLogger {
 	}
 	@Override
 	protected void writeString(Level level, CharSequence str) {
-		System.out.println(getPrefix(level) + str);
+		System.out.println(prefix.format(level, prefixStr) + str);
 	}
 	
 	/**

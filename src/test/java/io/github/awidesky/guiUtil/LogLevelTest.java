@@ -13,6 +13,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import io.github.awidesky.guiUtil.level.Level;
+import io.github.awidesky.guiUtil.prefix.SimplePrefixFormatter;
 import io.github.awidesky.guiUtil.simple.SimpleLogger;
 import io.github.awidesky.guiUtil.simple.StringLogger;
 
@@ -20,7 +21,8 @@ class LogLevelTest {
 	
 	private static SimpleLogger debugLogger = new SimpleLogger(System.out);
 	static {
-		debugLogger.setPrefix("[JUnit test debug output]");
+		debugLogger.setPrefixFormatter(new SimplePrefixFormatter());
+		debugLogger.setPrefixString("[LogLevelTest debug] ");
 		debugLogger.setLogLevel(Level.DEBUG); // delete this line or set higher level to omit test logs
 	}
 	

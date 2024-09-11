@@ -11,6 +11,7 @@ import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
 
 import io.github.awidesky.guiUtil.level.Level;
+import io.github.awidesky.guiUtil.prefix.NullPrefixFormatter;
 import io.github.awidesky.guiUtil.simple.SimpleLogger;
 
 class LoggerPrintStreamTest {
@@ -24,8 +25,11 @@ class LoggerPrintStreamTest {
 		StringWriter sw = new StringWriter();
 		try(Logger l = new SimpleLogger(sw, true);
 			PrintStream ps = l.toPrintStream(level, true, charset);) {
+			
+			l.setPrefixFormatter(NullPrefixFormatter.instance());
 			ps.print(msg);
+			
 		}
-		assertEquals(level.getPrefixText() + msg, sw.toString().strip());
+		assertEquals(msg, sw.toString().strip());
 	}
 }

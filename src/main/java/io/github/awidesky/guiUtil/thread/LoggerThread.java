@@ -7,14 +7,13 @@
  * Please refer to LICENSE
  * */
 
-package io.github.awidesky.guiUtil;
+package io.github.awidesky.guiUtil.thread;
 
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.Writer;
 import java.nio.charset.Charset;
-import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Collections;
 import java.util.Date;
@@ -22,9 +21,12 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.function.Consumer;
+import java.util.function.UnaryOperator;
 
 import io.github.awidesky.guiUtil.level.Level;
 import io.github.awidesky.guiUtil.level.Leveled;
+import io.github.awidesky.guiUtil.prefix.PrefixFormatter;
+import io.github.awidesky.guiUtil.prefix.SimplePrefixFormatter;
 
 
 /**
@@ -53,7 +55,7 @@ public class LoggerThread extends Thread implements Leveled {
 	
 	public volatile boolean isStop = false;
 	private Level level = Level.getRootLogLevel();
-	private DateFormat datePrefix = null;
+	private PrefixFormatter prefix = new SimplePrefixFormatter();
 	
 	/** Creates a new logger thread. */
 	public LoggerThread() { super("LoggerThread"); }
@@ -100,87 +102,14 @@ public class LoggerThread extends Thread implements Leveled {
 		logTo = new PrintWriter(wt, autoFlush);
 	}
 	
-	
 	/**
-	 * Returns a new {@code TaskLogger} with no initial prefix.
-	 * Returned {@code TaskLogger}'s verbosity is same as value of {@code LoggerThread#isVerbose()}
-	 * */
-	public TaskLogger getLogger() {
-		return getLogger(null, level);
-	} 
-	/**
-	 * Returns a new {@code TaskLogger} with given prefix.
-	 * Returned {@code TaskLogger}'s verbosity is same as value of {@code LoggerThread#isVerbose()}
-	 * */
-	public TaskLogger getLogger(String prefix) {
-		return getLogger(prefix, level);
-	}
-	/**
-	 * Returns a new {@code TaskLogger} with given prefix and verbosity.
-	 * */
-	public TaskLogger getLogger(String prefix, Level level) {
-		TaskLogger newLogger = new TaskLogger(prefix, level) {
-
-			@Override
-			public void queueLogTask(Consumer<PrintWriter> logTask) {
-				try {
-					loggerQueue.put(logTask);
-				} catch (InterruptedException e) {
-					if (!isStop) error(e);
-				}
-			}
-
-			@Override
-			public void close() {
-				children.remove(this);
-			}
-			
-		};
-		newLogger.setDatePrefix(datePrefix);
-		children.add(newLogger);
-		return newLogger;
-	}
-	
-	/**
-	 * Returns a new {@code TaskBufferedLogger} with no initial prefix.
-	 * Returned {@code TaskBufferedLogger}'s verbosity is same as value of {@code LoggerThread#isVerbose()}
-	 * */
-	public TaskBufferedLogger getBufferedLogger() {
-		return getBufferedLogger(null, level);
-	} 
-	/**
-	 * Returns a new {@code TaskBufferedLogger} with given prefix.
-	 * Returned {@code TaskBufferedLogger}'s verbosity is same as value of {@code LoggerThread#isVerbose()}
-	 * */
-	public TaskBufferedLogger getBufferedLogger(String prefix) {
-		return getBufferedLogger(prefix, level);
-	}
-	/**
-	 * Returns a new {@code TaskBufferedLogger} with given prefix and verbosity.
-	 * */
-	public TaskBufferedLogger getBufferedLogger(String prefix, Level level) {
-		TaskBufferedLogger newLogger = new TaskBufferedLogger(prefix, level) {
-
-			@Override
-			public void queueLogTask(Consumer<PrintWriter> logTask) {
-				try {
-					loggerQueue.put(logTask);
-				} catch (InterruptedException e) {
-					loggerQueue.offer(logTask);
-					if (!isStop) error(e);
-				}
-			}
-
-			@Override
-			public void close() {
-				flush();
-				children.remove(this);
-			}
-			
-		};
-		newLogger.setDatePrefix(datePrefix);
-		children.add(newLogger);
-		return newLogger;
+	 * Get a new builder for a child logger of this {@code LoggerThread}.
+	 * 
+	 * @return generated {@code LoggerBuilder} instance.
+	 * @see LoggerBuilder
+	 */
+	public LoggerBuilder getLoggerBuilder() {
+		return new LoggerBuilder();
 	}
 	
 	@Override
@@ -292,21 +221,30 @@ public class LoggerThread extends Thread implements Leveled {
 	}
 	
 	/**
-	 * Set date prefix of this {@code LoggerThread}.
-	 * date prefix of child {@code TaskLogger} generated after this call will set to {@code datePrefix}.
+	 * Set main prefix formatter of this {@code LoggerThread}.
+	 * prefix of child {@code TaskLogger} generated after this call will set to 
+	 * the given {@code prefix}.<br>
 	 * Children {@code TaskLogger}s who created previously is not effected.
+	 * 
+	 * @see LoggerThread#setPrefixAllChildren(UnaryOperator)
 	 * */
-	public void setDatePrefix(DateFormat datePrefix) {
-		this.datePrefix = datePrefix;
+	public void setPrefixFormatter(PrefixFormatter prefix) {
+		this.prefix = prefix;
 	}
 	/**
-	 * Set date prefix of this {@code LoggerThread} and all existing children {@code TaskLogger}s.
-	 * date prefix of child {@code TaskLogger}s generated after this call will set to {@code datePrefix}.
-	 * Children {@code TaskLogger}s who created previously are also changed to new date format.
+	 * Set prefix formatter of this {@code LoggerThread} and all existing children {@code TaskLogger}s,
+	 * using the given {@code UnaryOperator}.
+	 * {@code PrefixFormatter} field of each {@code TaskLogger} will applied to given {@code UnaryOperator},
+	 * and the return value will set to {@code PrefixFormatter} field of the {@code TaskLogger}.
+	 * <br>
+	 * The {@code LoggerThread}'s main prefix formatter will changed by the given {@code prefixChanger},
+	 * and used as the default prefix formatter of child {@code TaskLogger}s that generated after this call.
+	 * <p>
+	 * Children {@code TaskLogger}s who created previously are also changed to new format using the {@code UnaryOperator}.
 	 * */
-	public void setDatePrefixAllChildren(DateFormat datePrefix) {
-		this.datePrefix = datePrefix;
-		children.stream().forEach(l -> l.setDatePrefix(datePrefix));
+	public void setPrefixAllChildren(UnaryOperator<PrefixFormatter> prefixChanger) {
+		this.prefix = prefixChanger.apply(prefix);
+		children.stream().forEach(l -> l.setPrefixFormatter(prefixChanger.apply(l.getPrefixFormatter())));
 	}
 	
 	/**
@@ -332,5 +270,131 @@ public class LoggerThread extends Thread implements Leveled {
 		
 	}
 	
+	/**
+	 * Builder for child {@code TaskLogger} instance of the {@code LoggerThread}.<br>
+	 * A {@code TaskLogger} or {@code TaskBufferedLogger} instance can generated via
+	 * {@code LoggerBuilder#getLogger()} and {@code LoggerBuilder#getLogger()} methods.
+	 * Generated {@code TaskLogger} will be managed by outer {@code LoggerThread} object.
+	 * <p>
+	 * The {@code PrefixFormatter}, {@code Level}, {@code prefixString} properties of 
+	 * generated logger will set to {@code LoggerThread#prefix}, {@code LoggerThread#level},
+	 * {@code null} in default, and can be specified via setter methods in {@code LoggerBuilder}.<br>
+	 * {@code LoggerBuilder#setClonePrefixFormatter(boolean)} can define whether 
+	 * the prefix formatter should be cloned or not when generating the logger instance.
+	 * If {@code false}(default), every loggers generated will share same prefix formatter instance,
+	 * else, the prefix formatter will be cloned each time the logger is generated.
+	 */
+	public class LoggerBuilder {
+		
+		private PrefixFormatter childPrefixFormatter = LoggerThread.this.prefix;
+		private Level childLevel = LoggerThread.this.level;
+		private String childPrefixString = null;
+		private boolean clonePrefixFormatter = false;
+		
+		/**
+		 * Specifies log level.
+		 * @param level the log level to use.
+		 * @return This builder instance
+		 */
+		public LoggerBuilder setLevel(Level level) {
+			childLevel = level;
+			return this;
+		}
+		/**
+		 * Specifies prefix formatter.<br>
+		 * Given prefix formatter instance will be shared among generated loggers,
+		 * hence, {@code PrefixFormatter#pattern(String)} will affect every child logger
+		 * generated by this builder.
+		 * Set {@code LoggerBuilder#setClonePrefixFormatter(boolean)} to {@code true}
+		 * to clone prefix formatter instead of share.
+		 * 
+		 * @param prefix the prefix to use.
+		 * @return This builder instance
+		 */
+		public LoggerBuilder setPrefixFormatter(PrefixFormatter prefix) {
+			childPrefixFormatter = prefix;
+			return this;
+		}
+		/**
+		 * Specifies additional prefix {@code String}.
+		 * @param prefixString the additional prefix {@code String}.
+		 * @return This builder instance
+		 */
+		public LoggerBuilder setPrefixString(String prefixString) {
+			this.childPrefixString  = prefixString;
+			return this;
+		}
+		/**
+		 * Specifies whether to clone {@code PrefixFormatter}
+		 * @param clonePrefixFormatter
+		 * @return
+		 */
+		public LoggerBuilder setClonePrefixFormatter(boolean clonePrefixFormatter) {
+			this.clonePrefixFormatter  = clonePrefixFormatter;
+			return this;
+		}
+		private PrefixFormatter getPrefixFormatter() {
+			return clonePrefixFormatter ? childPrefixFormatter.clone() : childPrefixFormatter;
+		}
+		
+		/**
+		 * Returns a new {@code TaskLogger} that submits logs to the logger thread with specified properties.
+		 * */
+		public TaskLogger getLogger() {
+			TaskLogger newLogger = new TaskLogger(getPrefixFormatter(), childLevel) {
+
+				@Override
+				public void queueLogTask(Consumer<PrintWriter> logTask) {
+					try {
+						loggerQueue.put(logTask);
+					} catch (InterruptedException e) {
+						loggerQueue.offer(logTask);
+						if (!isStop) error(e);
+					}
+				}
+
+				@Override
+				public void close() {
+					children.remove(this);
+				}
+				
+			};
+			newLogger.setPrefixString(childPrefixString);
+			children.add(newLogger);
+			return newLogger;
+		}
+		
+		/**
+		 * Returns a new {@code TaskBufferedLogger} that submits logs to the logger thread only if flushed
+		 * with specified properties.
+		 * 
+		 * @see TaskBufferedLogger#flush()
+		 * */
+		public TaskBufferedLogger getBufferedLogger() {
+			TaskBufferedLogger newLogger = new TaskBufferedLogger(getPrefixFormatter(), childLevel) {
+
+				@Override
+				public void queueLogTask(Consumer<PrintWriter> logTask) {
+					try {
+						loggerQueue.put(logTask);
+					} catch (InterruptedException e) {
+						loggerQueue.offer(logTask);
+						if (!isStop) error(e);
+					}
+				}
+
+				@Override
+				public void close() {
+					flush();
+					children.remove(this);
+				}
+				
+			};
+			newLogger.setPrefixString(childPrefixString);
+			children.add(newLogger);
+			return newLogger;
+		}
+		
+	}
 	
 }

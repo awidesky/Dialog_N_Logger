@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 import io.github.awidesky.guiUtil.AbstractLogger;
 import io.github.awidesky.guiUtil.LoggerOutputStream;
 import io.github.awidesky.guiUtil.level.Level;
+import io.github.awidesky.guiUtil.prefix.NullPrefixFormatter;
 
 /**
  * Gather logs in a internal buffer.
@@ -22,7 +23,8 @@ public class StringLogger extends AbstractLogger {
 	
 	/**
 	 * Creates a new StringLogger with {@code printLogLevel}
-	 * set to {@code false}.
+	 * set to {@code false}, and {@code PrefixFormatter} set to
+	 * {@link NullPrefixFormatter}.
 	 */
 	public StringLogger() {
 		this(new LinkedList<>());
@@ -30,11 +32,11 @@ public class StringLogger extends AbstractLogger {
 	
 	/**
 	 * Initialize the {@code String} list with given parameter,
-	 * and set {@code printLogLevel} to {@code false}.
-	 * @param list
+	 * and {@code PrefixFormatter} set to {@link NullPrefixFormatter}.
+	 * @param list the buffer to store logged Strings
 	 */
 	protected StringLogger(List<String> list) {
-		setPrintLogLevel(false);
+		prefix = NullPrefixFormatter.instance();
 		this.list = list;
 	}
 	
@@ -48,6 +50,15 @@ public class StringLogger extends AbstractLogger {
 		String ret = list.stream().collect(Collectors.joining("\n"));
 		clear();
 		return ret;
+	}
+	/**
+	 * Returns the log string that were collected
+	 * The log buffer will <strong>not</strong> be cleared.
+	 * 
+	 * @return Texts that are logged since last call of {@link StringLogger#getString()}.
+	 */
+	public String peekString() {
+		return list.stream().collect(Collectors.joining("\n"));
 	}
 	
 	/**
@@ -74,7 +85,7 @@ public class StringLogger extends AbstractLogger {
 	
 	@Override
 	protected void writeString(Level level, CharSequence str) {
-		list.add(getPrefix(level) + str);
+		list.add(prefix.format(level, prefixStr) + str);
 	}
 	
 	@Override
